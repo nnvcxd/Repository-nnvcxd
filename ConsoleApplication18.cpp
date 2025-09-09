@@ -1,8 +1,8 @@
-﻿#include <bits/stdc++.h>
+#include <bits/stdc++.h>
 #include <chrono>
 #include <unordered_map>
 #include <unordered_set>
-
+#include <random>
 #define all(a) a.begin(), a.end()
 
 using namespace std;
@@ -96,6 +96,20 @@ private:
 	unordered_map<string, shared_ptr<User>> mapUser; 
 	unordered_map<string, Book> mapBookIsbn; 
 	vector <BorrowingRecord> history;
+	unordered_set<string> usedIds; 
+	
+	string generateUserId() {
+		static random_device rd;
+		static mt19937_64 gen(rd());
+		static uniform_int_distribution<uint64_t> dist(1, ULLONG_MAX);
+
+		string id;
+		do {
+			id = to_string(dist(gen));
+		} while (usedIds.count(id));
+		usedIds.insert(id);
+		return id;
+	}
 public:
 	bool addBook(const string& title, const string& author, const string& isbn, const string& genre) {
 		if (mapBookIsbn.count(isbn)) return false;
@@ -125,25 +139,24 @@ public:
 		return ans;
 	}
 	
-	bool registerUser(const string& name, const string& userId, const string& email, const string& t) {
-		if (mapUser.find(userId) != mapUser.end()) return false;
-		string T = t;
-		if (T == "student") {
-			shared_ptr<User> ptr = make_shared<Student>(name, userId, email); 
-			mapUser[userId] = ptr;
-			return true;
+	string registerUser(const string& name, const string& email, const string& t) {
+		string userId = generateUserId();
+
+		if (t == "student") {
+			mapUser[userId] = make_shared<Student>(name, userId, email);
 		}
-		if (T == "guest") {
-			shared_ptr<User> ptr = make_shared<Guest>(name, userId, email);
-			mapUser[userId] = ptr;
-			return true;
+		else if (t == "guest") {
+			mapUser[userId] = make_shared<Guest>(name, userId, email);
 		}
-		if (T == "faculty") {
-			shared_ptr<User> ptr = make_shared<Faculty>(name, userId, email);
-			mapUser[userId] = ptr;
-			return true;
+		else if (t == "faculty") {
+			mapUser[userId] = make_shared<Faculty>(name, userId, email);
 		}
+		else return ""; 
+		
+		return userId;
+		
 	}
+
 	shared_ptr<User> findUser(const string& userId) {
 		if (mapUser.find(userId) == mapUser.end()) return nullptr;
 		return mapUser.find(userId)->second;
@@ -296,11 +309,14 @@ private:
 		int choice = getIntInput("Enter choice: ");
 		if (choice == 1) {
 			string name; cout << "\nname: ";   cin >> name;
-			string userId; cout << "\nuserId: "; cin >> userId;
 			string email; cout << "\nemail: ";  cin >> email;
-			string typeUser; cout << "\ntypeUser(student/guest/faculty)"; cin >> typeUser;
-			if (lib_.registerUser(name, userId, email, typeUser)) cout << "\nthanks for register\n";
-			else cout << "\nalready exists\n";
+			string typeUser; cout << "\ntypeUser(student/guest/faculty): "; cin >> typeUser;
+
+			string id = lib_.registerUser(name, email, typeUser);
+			if (!id.empty())
+				cout << "\nthanks for register, your userId = " << id << "\n";
+			else
+				cout << "\nregistration failed\n";
 		}
 		else if (choice == 2) {
 			string userId; cout << "userId: "; cin >> userId;
